@@ -117,6 +117,11 @@ class Lct_Events {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-lct-events-admin.php';
 
 		/**
+		 * The class responsible for creating the admin settings page.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) .  'admin/class-lct-events-admin-settings.php';
+
+		/**
 		 * The class responsible for defining all actions that occur in the public-facing
 		 * side of the site.
 		 */
@@ -156,6 +161,13 @@ class Lct_Events {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+
+		//lct-events settings
+		$plugin_settings = new Lct_Events_Admin_Settings( $this->get_plugin_name(), $this->get_version() );
+		$this->loader->add_action( 'admin_menu', $plugin_settings, 'setup_plugin_options_menu' );
+		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_display_options' );
+		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_social_options' );
+		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_input_examples' );
 
 	}
 
@@ -215,4 +227,16 @@ class Lct_Events {
 		return $this->version;
 	}
 
+	/**
+	 * Create a scheduled event (if it does not exist already)
+	 *
+	 * @since     1.0.0
+	 * @return    string    The version number of the plugin.
+	 */
+	function lct_events_cron_activation() {
+		// WIP: https://wpguru.co.uk/2014/01/how-to-create-a-cron-job-in-wordpress-teach-your-plugin-to-do-something-automatically/
+		if ( !wp_next_scheduled( 'lctdailycron' ) ) {  
+			wp_schedule_event( time(), 'daily', 'lctdailycron' );  
+		}
+	}
 }
