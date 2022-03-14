@@ -112,6 +112,11 @@ class Lct_Events {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-lct-events-i18n.php';
 
 		/**
+		 * The class responsible for defining the cron
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-lct-events-cron.php';
+
+		/**
 		 * The class responsible for defining all actions that occur in the admin area.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-lct-events-admin.php';
@@ -169,6 +174,8 @@ class Lct_Events {
 		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_social_options' );
 		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_input_examples' );
 
+		$plugin_cron = new Lct_Events_Cron();
+		$this->loader->add_action( 'admin_init', $plugin_cron, 'lct_events_cron_activation' );
 	}
 
 	/**
@@ -184,6 +191,9 @@ class Lct_Events {
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
+
+		$plugin_cron = new Lct_Events_Cron();
+		$this->loader->add_action( 'init', $plugin_cron, 'lct_events_cron_activation' );
 
 	}
 
@@ -225,18 +235,5 @@ class Lct_Events {
 	 */
 	public function get_version() {
 		return $this->version;
-	}
-
-	/**
-	 * Create a scheduled event (if it does not exist already)
-	 *
-	 * @since     1.0.0
-	 * @return    string    The version number of the plugin.
-	 */
-	function lct_events_cron_activation() {
-		// WIP: https://wpguru.co.uk/2014/01/how-to-create-a-cron-job-in-wordpress-teach-your-plugin-to-do-something-automatically/
-		if ( !wp_next_scheduled( 'lctdailycron' ) ) {  
-			wp_schedule_event( time(), 'daily', 'lctdailycron' );  
-		}
 	}
 }
