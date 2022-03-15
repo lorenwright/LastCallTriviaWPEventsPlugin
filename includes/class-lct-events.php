@@ -78,6 +78,7 @@ class Lct_Events {
 		$this->set_locale();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
+		$this->define_cron_hook();
 
 	}
 
@@ -195,6 +196,17 @@ class Lct_Events {
 		$plugin_cron = new Lct_Events_Cron();
 		$this->loader->add_action( 'init', $plugin_cron, 'lct_events_cron_activation' );
 
+	}
+
+	/**
+	 * Register our cron hook
+	 * 
+	 * @since    1.0.0
+	 * @access   private
+	 */
+	private function define_cron_hook() {
+		$cron = new Lct_Events_Cron();
+		$this->loader->add_action('lct_daily_cron', $cron, 'lct_events_cron_run');
 	}
 
 	/**

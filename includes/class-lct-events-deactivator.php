@@ -30,7 +30,8 @@ class Lct_Events_Deactivator {
 	 * @since    1.0.0
 	 */
 	public static function deactivate() {
-		register_deactivation_hook (plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-lct-events-cron.php', 'lct_events_cron_deactivation');
+		$cron = new Lct_Events_Cron();
+		$cron->lct_events_cron_deactivation();
 	}
 
 }
