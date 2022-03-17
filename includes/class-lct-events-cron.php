@@ -35,95 +35,70 @@ class Lct_Events_Cron {
 	 * @return    void
 	 */
 	function lct_events_cron_run() {
-		// https://gist.github.com/ethanclevenger91/98f1101ca0da176de5cbb3a08bf3c05a
-		$event_id = tribe_create_event( [
-			'post_title' => 'Future Event',
+		// Pull events from API
+		$url = 'https://api.jsonbin.io/b/62333170a703bb67492e6cdc/1';  
+		$result = wp_remote_get( $url );
+
+		// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
+		$event = [
+			'post_title' => 'My post',
+			'post_content' => 'This is my post.',
 			'post_status' => 'publish',
-			'EventStartDate' => '2022-03-17',
-			'EventsEndDate' => '2022-03-23',
-			'EventStartHour' => '05',
-			'EventStartMinute' => '00',
+			'EventStartDate' => '2022-03-22',
+			'EventEndDate' => '2022-03-22',
+			'EventStartHour' => '2',
+			'EventStartMinute' => '29',
 			'EventStartMeridian' => 'pm',
-			'EventEndHour' => '09',
-			'EventEndMinute' => '30',
+			'EventEndHour' => '4',
+			'EventEndMinute' => '20',
 			'EventEndMeridian' => 'pm',
 			'EventShowMapLink' => true,
 			'EventShowMap' => true,
 			'EventCost' => '15.00',
 			'EventURL' => 'https://google.com',
+			'Venue' => [
+				'VenueID' => 20
+			],
+			// 'Organizer' => array(
+			// 	'Organizer' => 'Organizer Name',
+			// 	'Email' => 'me@me.com'	
+			// )
+		];
+		 
+		 // Insert the post into the database
+		 $event_id = tribe_create_event( $event );
 
-			// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
-		] );
-		
-		// $provider = \Tribe__Tickets__Tickets::get_event_ticket_provider();
-		
-		// $ticket_id = $provider::get_instance()->ticket_add( $event_id, [
-		// 	'ticket_name'     => 'Test ticket ' . uniqid(),
-		// 	'ticket_provider' => $provider,
-		// 	'ticket_price'    => '100',
-		// 	'tribe-ticket'    => [
-		// 		'mode'           => 'global',
-		// 		'event_capacity' => '100',
-		// 		'capacity'       => ''
-		// 	],
-		// 	'ticket_description'      => 'Wine and cheese night',
-		// 	'ticket_show_description' => '1',
-		// 	'ticket_start_date'       => '',
-		// 	'ticket_start_time'       => '',
-		// 	'ticket_end_date'         => '',
-		// 	'ticket_end_time'         => '',
-		// 	'ticket_sku'              => uniqid(),
-		// 	'ticket_id'               => '',
-		// ] );
-		
-		
-		// // Optionally, you can also add attendee meta when using TEC PRO
-		// // You can use an existing template by passing the ID to an existing ticket-meta-fieldset post
-		// // $ticket_fields = get_post_meta( 10734, \Tribe__Tickets_Plus__Meta__Fieldset::META_KEY, true );
-		
-		// // Or you can define your own programatically
-		// $ticket_fields = [
-		// 	[
-		// 		"type" => "text",
-		// 		"required" => "on",
-		// 		"label" => "First Name",
-		// 		"slug" => "first-name",
-		// 		"extra" => [],
-		// 	],
-		// 	[
-		// 		"type" => "email",
-		// 		"required" => "on",
-		// 		"label" => "Email",
-		// 		"slug" => "email",
-		// 		"extra" => [],
-		// 	],
-		// 	[
-		// 		"type" => "select",
-		// 		"required" => "on",
-		// 		"label" => "State",
-		// 		"slug" => "state",
-		// 		"extra" => [
-		// 			"options" => [
-		// 				"Alabama",
-		// 				"Alaska",
-		// 				"Arizona",
-		// 				// ...
-		// 				"Wisconsin",
-		// 				"Wyoming",
-		// 			],
-		// 		],
-		// 	],
-		// 	[
-		// 		"type" => "telephone",
-		// 		"required" => "on",
-		// 		"label" => "Mobile Phone",
-		// 		"slug" => "mobile-phone",
-		// 		"extra" => [],
-		// 	],
-		// ];
-		
-		// update_post_meta( $ticket_id, \Tribe__Tickets_Plus__Meta::META_KEY, $ticket_fields );
-		// update_post_meta( $ticket_id, \Tribe__Tickets_Plus__Meta::ENABLE_META_KEY, 'yes' );
+		 $this->generate_featured_image('https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/1600/900/75/dam/disneyland/destinations/disneyland/tomorrowland/disneyland-pizza-port-pepperoni-16x9.jpg', $event_id);
+	}
+
+	/**
+	* Downloads an image from the specified URL and attaches it to a post as a post thumbnail.
+	*
+	* @param string $image_url    The URL of the image to download.
+	* @param int $post_id	The post ID to associate the image with
+	*/
+	function generate_featured_image( $image_url, $post_id ){
+		$upload_dir = wp_upload_dir();
+		$image_data = file_get_contents($image_url);
+		$filename = basename($image_url);
+		if(wp_mkdir_p($upload_dir['path']))
+		$file = $upload_dir['path'] . '/' . $filename;
+		else
+		$file = $upload_dir['basedir'] . '/' . $filename;
+		file_put_contents($file, $image_data);
+
+		$wp_filetype = wp_check_filetype($filename, null );
+		$attachment = array(
+			'post_mime_type' => $wp_filetype['type'],
+			'post_title' => sanitize_file_name($filename),
+			'post_content' => '',
+			'post_status' => 'inherit'
+		);
+		$attach_id = wp_insert_attachment( $attachment, $file, $post_id );
+		require_once(ABSPATH . 'wp-admin/includes/image.php');
+		$attach_data = wp_generate_attachment_metadata( $attach_id, $file );
+		$res1= wp_update_attachment_metadata( $attach_id, $attach_data );
+		$res2= set_post_thumbnail( $post_id, $attach_id );
 	}
 
 }
