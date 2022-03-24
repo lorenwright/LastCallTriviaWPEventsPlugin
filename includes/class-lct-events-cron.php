@@ -36,39 +36,61 @@ class Lct_Events_Cron {
 	 */
 	function lct_events_cron_run() {
 		// Pull events from API
-		$url = 'https://api.jsonbin.io/b/62333170a703bb67492e6cdc/1';  
-		$result = wp_remote_get( $url );
+		$url = 'https://api.jsonbin.io/v3/b/62333170a703bb67492e6cdc/1';
+		$key = '$2b$10$YZ7/yh6bC817K6wuc.a0lupxXfof//DyvexXfUy/j1Mp.RbYBSfem';
+		$request = wp_remote_get( $url, array(
+			'headers' => array(
+				'X-Master-Key' => $key
+			)
+		) );
 
-		// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
-		$event = [
-			'post_title' => 'My post',
-			'post_content' => 'This is my post.',
-			'post_status' => 'publish',
-			'EventStartDate' => '2022-03-22',
-			'EventEndDate' => '2022-03-22',
-			'EventStartHour' => '2',
-			'EventStartMinute' => '29',
-			'EventStartMeridian' => 'pm',
-			'EventEndHour' => '4',
-			'EventEndMinute' => '20',
-			'EventEndMeridian' => 'pm',
-			'EventShowMapLink' => true,
-			'EventShowMap' => true,
-			'EventCost' => '15.00',
-			'EventURL' => 'https://google.com',
-			'Venue' => [
-				'VenueID' => 20
-			],
-			// 'Organizer' => array(
-			// 	'Organizer' => 'Organizer Name',
-			// 	'Email' => 'me@me.com'	
-			// )
-		];
-		 
-		 // Insert the post into the database
-		 $event_id = tribe_create_event( $event );
+		if( is_wp_error( $request ) ) {
+			return false; // Bail early
+		}
 
-		 $this->generate_featured_image('https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/1600/900/75/dam/disneyland/destinations/disneyland/tomorrowland/disneyland-pizza-port-pepperoni-16x9.jpg', $event_id);
+		$body = wp_remote_retrieve_body( $request );
+		$data = json_decode( $body );
+
+		if( ! empty( $data ) ) {
+			foreach ($data->record->events as $event) {
+				if ($event->ShouldAddEvent) {
+					// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
+					$new_event = [
+						'post_title' => $event->EventName,
+						'post_content' => $event->EventDescription,
+						'post_status' => 'publish',
+						'EventStartDate' => $event->EventStartDate,
+						'EventEndDate' => $event->EventEndDate,
+						'EventStartHour' => $event->EventStartHour,
+						'EventStartMinute' => $event->EventStartMinute,
+						'EventStartMeridian' => $event->EventStartMeridian,
+						'EventEndHour' => $event->EventEndHour,
+						'EventEndMinute' => $event->EventEndMinute,
+						'EventEndMeridian' => $event->EventEndMeridian,
+						'EventShowMapLink' => $event->EventShowMapLink,
+						'EventShowMap' => $event->EventShowMap,
+						'EventCost' => $event->EventCost,
+						'EventURL' => $event->EventURL,
+						'Venue' => [
+							'VenueID' => $event->VenueID,
+							// 'Venue' => $event->VenueName,
+							// 'Address' => $event->VenueAddress,
+							// 'City' => $event->VenueCity,
+							// 'State' => $event->VenueState,
+							// 'Zip' => $event->VenueZip,
+							// 'Phone' => $event->VenuePhone
+						],
+					];
+					
+					// Insert the post into the database
+					$event_id = tribe_create_event( $new_event );
+
+					if ($event->EventImage) {
+						$this->generate_featured_image($event->EventImage, $event_id);
+					}
+				}
+			}
+		}
 	}
 
 	/**
