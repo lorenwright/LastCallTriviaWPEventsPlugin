@@ -36,13 +36,8 @@ class Lct_Events_Cron {
 	 */
 	function lct_events_cron_run() {
 		// Pull events from API
-		$url = 'https://api.jsonbin.io/v3/b/62333170a703bb67492e6cdc/1';
-		$key = '$2b$10$YZ7/yh6bC817K6wuc.a0lupxXfof//DyvexXfUy/j1Mp.RbYBSfem';
-		$request = wp_remote_get( $url, array(
-			'headers' => array(
-				'X-Master-Key' => $key
-			)
-		) );
+		$url = get_option('lct_events_general_options')['api_endpoint'];
+		$request = wp_remote_get( $url );
 
 		if( is_wp_error( $request ) ) {
 			return false; // Bail early
@@ -52,43 +47,92 @@ class Lct_Events_Cron {
 		$data = json_decode( $body );
 
 		if( ! empty( $data ) ) {
-			foreach ($data->record->events as $event) {
-				if ($event->ShouldAddEvent) {
-					// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
-					$new_event = [
-						'post_title' => $event->EventName,
-						'post_content' => $event->EventDescription,
-						'post_status' => 'publish',
-						'EventStartDate' => $event->EventStartDate,
-						'EventEndDate' => $event->EventEndDate,
-						'EventStartHour' => $event->EventStartHour,
-						'EventStartMinute' => $event->EventStartMinute,
-						'EventStartMeridian' => $event->EventStartMeridian,
-						'EventEndHour' => $event->EventEndHour,
-						'EventEndMinute' => $event->EventEndMinute,
-						'EventEndMeridian' => $event->EventEndMeridian,
-						'EventShowMapLink' => $event->EventShowMapLink,
-						'EventShowMap' => $event->EventShowMap,
-						'EventCost' => $event->EventCost,
-						'EventURL' => $event->EventURL,
-						'Venue' => [
-							'VenueID' => $event->VenueID,
-							// 'Venue' => $event->VenueName,
-							// 'Address' => $event->VenueAddress,
-							// 'City' => $event->VenueCity,
-							// 'State' => $event->VenueState,
-							// 'Zip' => $event->VenueZip,
-							// 'Phone' => $event->VenuePhone
-						],
-					];
-					
-					// Insert the post into the database
-					$event_id = tribe_create_event( $new_event );
+			foreach ($data->results as $venue) {
+				$venue_args = [
+					'Venue' => $venue->name,
+					'Country' => 'United States',
+					'Address' => $venue->address,
+					'City' => $venue->city,
+					'State' => $venue->state,
+					'Zip' => $venue->zip,
+					'Phone' => $venue->phone,
+					'URL' => $venue->website,
+				];
 
-					if ($event->EventImage) {
-						$this->generate_featured_image($event->EventImage, $event_id);
-					}
+				// Find if we already have added the venue to WP
+				$query = new WP_Query( array(
+					'post_type' => 'tribe_venue',
+					'meta_key' => 'VENUE_ID',
+					'meta_value' => $venue->id
+				) );
+
+				// If we have already added the venue to WP, update that venue
+				if ( $query->have_posts() ) {
+					while ( $query->have_posts() ) : $query->the_post();
+						$venue_id = get_the_ID();
+						tribe_update_venue( $venue_id, $venue_args );
+					endwhile;
+				// Otherwise, create a new venue
+				} else {
+					$venue_id = tribe_create_venue ( $venue_args );
 				}
+
+				// Add the meta key for the VENUE_ID. This is how we relate WP Venues to Symfony Venues
+				add_post_meta($venue_id, 'VENUE_ID', $venue->id, true);
+				wp_reset_postdata();
+
+				$query = new WP_Query( array(
+					'post_type' => 'tribe_event',
+					'posts_per_page' => -1,
+					'meta_key' => 'FROM_API',
+				) );
+
+				if ( $query->have_posts() ) {
+					while ( $query->have_posts() ) : $query->the_post();
+						$event_id = get_the_ID();
+						wp_delete_post( $event_id, true );
+					endwhile;
+				}
+				wp_reset_postdata();
+
+				// Start Adding Events
+
+				$start_minute = explode(' ', $venue->startTime)[0];
+				$start_minute = explode(':', $start_minute)[1];
+
+				$end_minute = explode(' ', $venue->endTime)[0];
+				$end_minute = explode(':', $end_minute)[1];
+
+				// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
+				$new_event = [
+					'post_title' => $venue->name,
+					'post_content' => $venue->recurrenceRule,
+					'post_status' => 'publish',
+					'EventStartDate' => date('Y-m-d'), // TODO
+					'EventEndDate' => date('Y-m-d'), // TODO
+					'EventStartHour' => explode(':', $venue->startTime)[0],
+					'EventStartMinute' => $start_minute,
+					'EventStartMeridian' => explode(' ', $venue->startTime)[1],
+					'EventEndHour' => explode(':', $venue->endTime)[0],
+					'EventEndMinute' => $end_minute,
+					'EventEndMeridian' => explode(' ', $venue->endTime)[1],
+					'EventShowMapLink' => true,
+					'EventShowMap' => true,
+					// 'EventCost' => $event->EventCost,
+					'EventURL' => $venue->website,
+					'Venue' => [
+						'VenueID' => $venue_id,
+					],
+				];
+				
+				// Create a new event
+				$event_id = tribe_create_event( $new_event );
+				add_post_meta($event_id, 'FROM_API', true, true);	
+
+				// 	if ($event->EventImage) {
+				// 		$this->generate_featured_image($event->EventImage, $event_id);
+				// 	}
+				// }
 			}
 		}
 	}

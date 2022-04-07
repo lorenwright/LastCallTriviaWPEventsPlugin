@@ -167,13 +167,12 @@ class Lct_Events {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+		$this->loader->add_filter( 'tribe_events_register_venue_type_args', $plugin_admin, 'lct_events_venues_custom_field_support' );
 
 		//lct-events settings
 		$plugin_settings = new Lct_Events_Admin_Settings( $this->get_plugin_name(), $this->get_version() );
 		$this->loader->add_action( 'admin_menu', $plugin_settings, 'setup_plugin_options_menu' );
-		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_display_options' );
-		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_social_options' );
-		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_input_examples' );
+		$this->loader->add_action( 'admin_init', $plugin_settings, 'initialize_general_options' );
 
 		$plugin_cron = new Lct_Events_Cron();
 		$this->loader->add_action( 'admin_init', $plugin_cron, 'lct_events_cron_activation' );

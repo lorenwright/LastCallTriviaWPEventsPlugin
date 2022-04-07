@@ -100,4 +100,15 @@ class Lct_Events_Admin {
 
 	}
 
+	/**
+	 * Enable custom field support for venue posts.
+	 * 
+	 * @param  array $args
+	 * @return array
+	 */
+	public function lct_events_venues_custom_field_support( $args ) {
+		$args['supports'][] = 'custom-fields';
+		return $args;
+	}
+
 }
