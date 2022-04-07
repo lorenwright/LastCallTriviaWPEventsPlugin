@@ -47,94 +47,125 @@ class Lct_Events_Cron {
 		$data = json_decode( $body );
 
 		if( ! empty( $data ) ) {
+			// We need to delete all previously added events, so that we can add them in again fresh
+			$this->delete_events_added_from_api();
 			foreach ($data->results as $venue) {
-				$venue_args = [
-					'Venue' => $venue->name,
-					'Country' => 'United States',
-					'Address' => $venue->address,
-					'City' => $venue->city,
-					'State' => $venue->state,
-					'Zip' => $venue->zip,
-					'Phone' => $venue->phone,
-					'URL' => $venue->website,
-				];
-
-				// Find if we already have added the venue to WP
-				$query = new WP_Query( array(
-					'post_type' => 'tribe_venue',
-					'meta_key' => 'VENUE_ID',
-					'meta_value' => $venue->id
-				) );
-
-				// If we have already added the venue to WP, update that venue
-				if ( $query->have_posts() ) {
-					while ( $query->have_posts() ) : $query->the_post();
-						$venue_id = get_the_ID();
-						tribe_update_venue( $venue_id, $venue_args );
-					endwhile;
-				// Otherwise, create a new venue
-				} else {
-					$venue_id = tribe_create_venue ( $venue_args );
-				}
-
-				// Add the meta key for the VENUE_ID. This is how we relate WP Venues to Symfony Venues
-				add_post_meta($venue_id, 'VENUE_ID', $venue->id, true);
-				wp_reset_postdata();
-
-				$query = new WP_Query( array(
-					'post_type' => 'tribe_event',
-					'posts_per_page' => -1,
-					'meta_key' => 'FROM_API',
-				) );
-
-				if ( $query->have_posts() ) {
-					while ( $query->have_posts() ) : $query->the_post();
-						$event_id = get_the_ID();
-						wp_delete_post( $event_id, true );
-					endwhile;
-				}
-				wp_reset_postdata();
+				// Update or create venue
+				$wp_venue_id = $this->update_or_create_venue($venue);
 
 				// Start Adding Events
-
-				$start_minute = explode(' ', $venue->startTime)[0];
-				$start_minute = explode(':', $start_minute)[1];
-
-				$end_minute = explode(' ', $venue->endTime)[0];
-				$end_minute = explode(':', $end_minute)[1];
-
-				// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
-				$new_event = [
-					'post_title' => $venue->name,
-					'post_content' => $venue->recurrenceRule,
-					'post_status' => 'publish',
-					'EventStartDate' => date('Y-m-d'), // TODO
-					'EventEndDate' => date('Y-m-d'), // TODO
-					'EventStartHour' => explode(':', $venue->startTime)[0],
-					'EventStartMinute' => $start_minute,
-					'EventStartMeridian' => explode(' ', $venue->startTime)[1],
-					'EventEndHour' => explode(':', $venue->endTime)[0],
-					'EventEndMinute' => $end_minute,
-					'EventEndMeridian' => explode(' ', $venue->endTime)[1],
-					'EventShowMapLink' => true,
-					'EventShowMap' => true,
-					// 'EventCost' => $event->EventCost,
-					'EventURL' => $venue->website,
-					'Venue' => [
-						'VenueID' => $venue_id,
-					],
-				];
-				
-				// Create a new event
-				$event_id = tribe_create_event( $new_event );
-				add_post_meta($event_id, 'FROM_API', true, true);	
-
-				// 	if ($event->EventImage) {
-				// 		$this->generate_featured_image($event->EventImage, $event_id);
-				// 	}
-				// }
+				$this->add_events_from_api($venue, $wp_venue_id);
 			}
 		}
+	}
+
+	/**
+	 * This updates or creates a venue inside of WordPress.
+	 *
+	 * @since     1.0.0
+	 * @param     array	$venue			The Object we want to create the venue with
+	 * @return    int	$wp_venue_id	The ID of the WordPress venue
+	 */
+	function update_or_create_venue( $venue ) {
+		$venue_args = [
+			'Venue' => $venue->name,
+			'Country' => 'United States',
+			'Address' => $venue->address,
+			'City' => $venue->city,
+			'State' => $venue->state,
+			'Zip' => $venue->zip,
+			'Phone' => $venue->phone,
+			'URL' => $venue->website,
+		];
+
+		// Find if we already have added the venue to WP
+		$query = new WP_Query( array(
+			'post_type' => 'tribe_venue',
+			'meta_key' => 'VENUE_ID',
+			'meta_value' => $venue->id
+		) );
+
+		// If we have already added the venue to WP, update that venue
+		if ( $query->have_posts() ) {
+			while ( $query->have_posts() ) : $query->the_post();
+				$wp_venue_id = get_the_ID();
+				tribe_update_venue( $wp_venue_id, $venue_args );
+			endwhile;
+		// Otherwise, create a new venue
+		} else {
+			$wp_venue_id = tribe_create_venue ( $venue_args );
+		}
+
+		// Add the meta key for the VENUE_ID. This is how we relate WP Venues to Symfony Venues
+		add_post_meta($wp_venue_id, 'VENUE_ID', $venue->id, true);
+		wp_reset_postdata();
+		return $wp_venue_id;
+	}
+
+	/**
+	 * This deletes all events with the meta_key `FROM_API` with a value of `true`
+	 *
+	 * @since     1.0.0
+	 * @return    void
+	 */
+	function delete_events_added_from_api() {
+		$query = new WP_Query( array(
+			'post_type' => 'tribe_events',
+			'posts_per_page' => -1,
+			'meta_key' => 'FROM_API',
+			'meta_value' => true
+		) );
+
+		foreach ($query->posts as $post) {
+			wp_delete_post($post->ID, true);
+		}
+		wp_reset_postdata();
+	}
+
+	/**
+	 * This is where we add events from the API
+	 *
+	 * @since     1.0.0
+	 * @param     array	$venue	The venue object to create an event with
+	 * @param     int	$wp_venue_id	The WordPress venue to associate the event with
+	 * @return    void
+	 */
+	function add_events_from_api( $venue, $wp_venue_id ) {
+		$start_minute = explode(' ', $venue->startTime)[0];
+		$start_minute = explode(':', $start_minute)[1];
+
+		$end_minute = explode(' ', $venue->endTime)[0];
+		$end_minute = explode(':', $end_minute)[1];
+
+		// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
+		$new_event = [
+			'post_title' => $venue->name,
+			'post_content' => $venue->recurrenceRule,
+			'post_status' => 'publish',
+			'EventStartDate' => date('Y-m-d'), // TODO
+			'EventEndDate' => date('Y-m-d'), // TODO
+			'EventStartHour' => explode(':', $venue->startTime)[0],
+			'EventStartMinute' => $start_minute,
+			'EventStartMeridian' => explode(' ', $venue->startTime)[1],
+			'EventEndHour' => explode(':', $venue->endTime)[0],
+			'EventEndMinute' => $end_minute,
+			'EventEndMeridian' => explode(' ', $venue->endTime)[1],
+			'EventShowMapLink' => true,
+			'EventShowMap' => true,
+			// 'EventCost' => $event->EventCost,
+			'EventURL' => $venue->website,
+			'Venue' => [
+				'VenueID' => $wp_venue_id,
+			],
+		];
+		
+		// Create a new event
+		$event_id = tribe_create_event( $new_event );
+		add_post_meta($event_id, 'FROM_API', true, true);
+
+		// if ($event->EventImage) {
+		// 	$this->generate_featured_image($event->EventImage, $event_id);
+		// }
 	}
 
 	/**
