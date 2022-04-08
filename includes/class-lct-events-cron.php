@@ -137,6 +137,12 @@ class Lct_Events_Cron {
 		$end_minute = explode(' ', $venue->endTime)[0];
 		$end_minute = explode(':', $end_minute)[1];
 
+		$game = $this->getOptionDisplay($this->typeOptions, $venue->type);
+		$region = ucwords($venue->region);
+		$theme = $venue->theme;
+		$features = $this->getOptionDisplay($this->featureOptions, $venue->features);
+
+
 		// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
 		$new_event = [
 			'post_title' => $venue->name,
@@ -157,6 +163,11 @@ class Lct_Events_Cron {
 			'Venue' => [
 				'VenueID' => $wp_venue_id,
 			],
+			'_ecp_custom_2' => $game, // Game
+			'_ecp_custom_3' => $region, // Region
+			// '_ecp_custom_4' => 'Thursday', // Day
+			'_ecp_custom_5' => $features, // Features
+			'_ecp_custom_6' => $theme, // Themes
 		];
 		
 		// Create a new event
@@ -197,5 +208,33 @@ class Lct_Events_Cron {
 		$res1= wp_update_attachment_metadata( $attach_id, $attach_data );
 		$res2= set_post_thumbnail( $post_id, $attach_id );
 	}
+
+    /**
+     * @param  string $optionKey
+     * @return string
+     */
+    public function getOptionDisplay($options, $optionKey)
+    {
+        if (!isset($options[$optionKey])) {
+            return "Unknown option ($optionKey)";
+        }
+
+        return $options[$optionKey];
+    }
+
+	public $typeOptions = [
+        'trivia'           => 'Trivia',
+        'feud'             => 'Feud',
+        'theme_trivia'     => 'Theme Trivia',
+        'private_event'    => 'Private Event',
+        'one_hour_bingo'   => '1 Hour Bingo',
+        'two_hour_bingo'   => '2 Hour Bingo'
+    ];
+
+	public $featureOptions = [
+        'new'           => 'New Show',
+        'returning'     => 'Returning Show',
+        'theme'     	=> 'Theme Show',
+    ];
 
 }
