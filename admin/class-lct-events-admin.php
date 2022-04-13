@@ -111,4 +111,60 @@ class Lct_Events_Admin {
 		return $args;
 	}
 
+	/**
+	 * Enable custom field filtering on admin site.
+	 * 
+	 * @return void
+	 */
+	public function lct_events_custom_field_filtering() {
+		$type = 'tribe_events'; // change to custom post name.
+		if (isset($_GET['tribe_events'])) {
+			$type = $_GET['tribe_events'];
+		}
+
+		//only add filter to post type `tribe_events`
+		if ('tribe_events' == $type){
+			//change this to the list of values you want to show
+			//in 'label' => 'value' format
+			$values = array(
+				'FROM_API' => true
+			);
+			?>
+			<select name="FROM_API">
+			<option value=""><?php _e('Filter By ', 'lct_events_posts_filter'); ?></option>
+			<?php
+				$current_v = isset($_GET['FROM_API'])? $_GET['FROM_API']:'';
+				foreach ($values as $label => $value) {
+					printf
+						(
+							'<option value="%s"%s>%s</option>',
+							$value,
+							$value == $current_v? ' selected="selected"':'',
+							$label
+						);
+					}
+			?>
+			</select>
+			<?php
+		}
+	}
+
+	/**
+	 * If submitted filter by post meta
+	 * 
+	 * @param  array $args
+	 * @return array
+	 */
+	public function lct_events_posts_filter( $query ) {
+		global $pagenow;
+		$type = 'tribe_events';
+		if (isset($_GET['tribe_events'])) {
+			$type = $_GET['tribe_events'];
+		}
+		if ( 'tribe_events' == $type && is_admin() && $pagenow=='edit.php' && isset($_GET['FROM_API']) && $_GET['FROM_API'] != '') {
+			$query->query_vars['meta_key'] = 'FROM_API';
+			$query->query_vars['meta_value'] = $_GET['FROM_API']; 
+		}
+	}
+
 }

@@ -46,8 +46,8 @@ class Lct_Events_Admin_Settings {
   public function setup_plugin_options_menu() {
     //Add the menu to the Plugins set of menu items
     add_menu_page(
-      'LCT Events Options',           // The title to be displayed in the browser window for this page.
-      'LCT Events Options',          // The text to be displayed for this menu item
+      'LCT Event Options',           // The title to be displayed in the browser window for this page.
+      'LCT Event Options',          // The text to be displayed for this menu item
       'manage_options',          // Which type of users can see this menu item
       'lct_events_options',      // The unique ID - that is, the slug - for this menu item
       array( $this, 'render_settings_page_content'),      // The name of the function to call when rendering this menu's page
@@ -79,6 +79,7 @@ class Lct_Events_Admin_Settings {
       <h2 class="nav-tab-wrapper">
         <a href="?page=lct_events_options&tab=general_options" class="nav-tab <?php echo $active_tab == 'general_options' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Options', 'lct-events-plugin' ); ?></a>
       </h2>
+      <a style="margin-top: 32px; display: block;" href="<?php echo admin_url('/edit.php?post_type=tribe_events&FROM_API=1'); ?>">Show Events</a>
       <form method="post" action="options.php">
         <?php
         if( $active_tab == 'general_options' ) {

@@ -167,6 +167,8 @@ class Lct_Events {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+		$this->loader->add_action( 'restrict_manage_posts', $plugin_admin, 'lct_events_custom_field_filtering' );
+		$this->loader->add_filter( 'parse_query', $plugin_admin, 'lct_events_posts_filter' );
 		$this->loader->add_filter( 'tribe_events_register_venue_type_args', $plugin_admin, 'lct_events_venues_custom_field_support' );
 
 		//lct-events settings
