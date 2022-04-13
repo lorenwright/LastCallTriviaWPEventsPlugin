@@ -11,7 +11,7 @@ class Lct_Events_Cron {
 	function lct_events_cron_activation() {
 		// https://wpguru.co.uk/2014/01/how-to-create-a-cron-job-in-wordpress-teach-your-plugin-to-do-something-automatically/
 		if ( !wp_next_scheduled( 'lct_daily_cron' ) ) {  
-			wp_schedule_event( time(), 'daily', 'lct_daily_cron' );  
+			wp_schedule_event( strtotime('3am tomorrow' ), 'daily', 'lct_daily_cron' );  
 		}
 	}
 
@@ -73,7 +73,7 @@ class Lct_Events_Cron {
 			'Address' => $venue->address,
 			'City' => $venue->city,
 			'State' => $venue->state,
-			'Zip' => $venue->zip,
+			// 'Zip' => $venue->zip,
 			'Phone' => $venue->phone,
 			'URL' => $venue->website,
 		];
@@ -108,7 +108,7 @@ class Lct_Events_Cron {
 	 * @since     1.0.0
 	 * @return    void
 	 */
-	function delete_events_added_from_api() {
+	public static function delete_events_added_from_api() {
 		$query = new WP_Query( array(
 			'post_type' => 'tribe_events',
 			'posts_per_page' => -1,
@@ -142,37 +142,39 @@ class Lct_Events_Cron {
 		$theme = $venue->theme;
 		$features = $this->getOptionDisplay($this->featureOptions, $venue->features);
 
+		foreach ($venue->events as $event) {
+			// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
+			$new_event = [
+				'post_title' => $event->title,
+				// 'post_content' => '',
+				'post_status' => 'publish',
+				'EventStartDate' => $event->start,
+				'EventEndDate' => $event->end,
+				'EventStartHour' => explode(':', $venue->startTime)[0],
+				'EventStartMinute' => $start_minute,
+				'EventStartMeridian' => explode(' ', $venue->startTime)[1],
+				'EventEndHour' => explode(':', $venue->endTime)[0],
+				'EventEndMinute' => $end_minute,
+				'EventEndMeridian' => explode(' ', $venue->endTime)[1],
+				'EventShowMapLink' => true,
+				'EventShowMap' => true,
+				// 'EventCost' => $event->EventCost,
+				'EventURL' => $venue->website,
+				'Venue' => [
+					'VenueID' => $wp_venue_id,
+				],
+				'_ecp_custom_2' => $game, // Game
+				'_ecp_custom_3' => $region, // Region
+				// '_ecp_custom_4' => 'Thursday', // Day
+				'_ecp_custom_5' => $features, // Features
+				'_ecp_custom_6' => $theme, // Themes
+			];
 
-		// see https://docs.theeventscalendar.com/reference/functions/tribe_create_event/ for full arguments
-		$new_event = [
-			'post_title' => $venue->name,
-			'post_content' => $venue->recurrenceRule,
-			'post_status' => 'publish',
-			'EventStartDate' => date('Y-m-d'), // TODO
-			'EventEndDate' => date('Y-m-d'), // TODO
-			'EventStartHour' => explode(':', $venue->startTime)[0],
-			'EventStartMinute' => $start_minute,
-			'EventStartMeridian' => explode(' ', $venue->startTime)[1],
-			'EventEndHour' => explode(':', $venue->endTime)[0],
-			'EventEndMinute' => $end_minute,
-			'EventEndMeridian' => explode(' ', $venue->endTime)[1],
-			'EventShowMapLink' => true,
-			'EventShowMap' => true,
-			// 'EventCost' => $event->EventCost,
-			'EventURL' => $venue->website,
-			'Venue' => [
-				'VenueID' => $wp_venue_id,
-			],
-			'_ecp_custom_2' => $game, // Game
-			'_ecp_custom_3' => $region, // Region
-			// '_ecp_custom_4' => 'Thursday', // Day
-			'_ecp_custom_5' => $features, // Features
-			'_ecp_custom_6' => $theme, // Themes
-		];
+			// Create a new event
+			$event_id = tribe_create_event( $new_event );
+			add_post_meta($event_id, 'FROM_API', true, true);
+		}
 		
-		// Create a new event
-		$event_id = tribe_create_event( $new_event );
-		add_post_meta($event_id, 'FROM_API', true, true);
 
 		// if ($event->EventImage) {
 		// 	$this->generate_featured_image($event->EventImage, $event_id);

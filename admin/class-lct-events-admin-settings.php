@@ -41,8 +41,7 @@ class Lct_Events_Admin_Settings {
     $this->version = $version;
   }
   /**
-   * This function introduces the theme options into the 'Appearance' menu and into a top-level
-   * 'WPPB Demo' menu.
+   * This function introduces the plugin options into the menu and into a top-level 'LCT Events Options' menu.
    */
   public function setup_plugin_options_menu() {
     //Add the menu to the Plugins set of menu items
@@ -89,6 +88,18 @@ class Lct_Events_Admin_Settings {
         submit_button();
         ?>
       </form>
+
+      <?php
+        $url = strtok($_SERVER["REQUEST_URI"], '?');
+      ?>
+
+      <form action="<?php echo $url; ?>?page=lct_events_options&tab=general_options&delete_events_from_api" method="post">        
+        <?php submit_button( 'Delete all Events added from API' ); ?>
+      </form>
+
+      <form action="<?php echo $url; ?>?page=lct_events_options&tab=general_options&sync_venues_and_events" method="post">        
+        <?php submit_button( 'Manually sync Events & Venues' ); ?>
+      </form>
     </div><!-- /.wrap -->
   <?php
   }
@@ -96,7 +107,7 @@ class Lct_Events_Admin_Settings {
   /**
    * This function provides a simple description for the General Options page.
    *
-   * It's called from the 'wppb-demo_initialize_theme_options' function by being passed as a parameter
+   * It's called from the 'initialize_general_options' function by being passed as a parameter
    * in the add_settings_section function.
    */
   public function general_options_callback() {
@@ -104,33 +115,32 @@ class Lct_Events_Admin_Settings {
   } // end general_options_callback
 
   /**
-   * Initializes the theme's general options page by registering the Sections,
+   * Initializes the plugin's general options page by registering the Sections,
    * Fields, and Settings.
    *
    * This function is registered with the 'admin_init' hook.
    */
   public function initialize_general_options() {
-    // If the theme options don't exist, create them.
+    // If the plugin options don't exist, create them.
     if( false == get_option( 'lct_events_general_options' ) ) {
       $default_array = $this->default_general_options();
       add_option( 'lct_events_general_options', $default_array );
     }
     
     add_settings_section(
-      'general_settings_section',                  // ID used to identify this section and with which to register options
-      __( 'Options', 'lct-events-plugin' ),            // Title to be displayed on the administration page
-      array( $this, 'general_options_callback'),      // Callback used to render the description of the section
-      'lct_events_general_options'                    // Page on which to add this section of options
+      'general_settings_section', // ID used to identify this section and with which to register options
+      __( 'Options', 'lct-events-plugin' ), // Title to be displayed on the administration page
+      array( $this, 'general_options_callback'), // Callback used to render the description of the section
+      'lct_events_general_options' // Page on which to add this section of options
     );
 
-    // Next, we'll introduce the fields for toggling the visibility of content elements.
     add_settings_field(
-      'api_endpoint',                    // ID used to identify the field throughout the theme
-      __( 'API Endpoint', 'lct-events-plugin' ),          // The label to the left of the option interface element
-      array( $this, 'api_endpoint_callback'),  // The name of the function responsible for rendering the option interface
-      'lct_events_general_options',              // The page on which this option will be displayed
-      'general_settings_section',              // The name of the section to which this field belongs
-      array(                        // The array of arguments to pass to the callback. In this case, just a description.
+      'api_endpoint', // ID used to identify the field throughout the plugin
+      __( 'API Endpoint', 'lct-events-plugin' ), // The label to the left of the option interface element
+      array( $this, 'api_endpoint_callback'), // The name of the function responsible for rendering the option interface
+      'lct_events_general_options', // The page on which this option will be displayed
+      'general_settings_section', // The name of the section to which this field belongs
+      array( // The array of arguments to pass to the callback. In this case, just a description.
         __( 'The API endpoint to hit to gather events', 'lct-events-plugin' ),
       )
     );
@@ -141,7 +151,17 @@ class Lct_Events_Admin_Settings {
       'lct_events_general_options',
       array( $this, 'validate_general_options')
     );
-  } // end wppb-demo_initialize_theme_options
+
+    $redirect_url = strtok($_SERVER["REQUEST_URI"], '?');
+
+    if (array_key_exists( 'delete_events_from_api', $_GET)) {
+      $this->delete_events_from_api();
+      header('Location: ' . $redirect_url . '?page=lct_events_options&tab=general_options');
+    } else if (array_key_exists( 'sync_venues_and_events', $_GET)) {
+      $this->sync_venues_and_events();
+      header('Location: ' . $redirect_url . '?page=lct_events_options&tab=general_options');
+    }
+  } // end initialize_general_options
 
   public function api_endpoint_callback() {
     $options = get_option( 'lct_events_general_options' );
@@ -164,4 +184,13 @@ class Lct_Events_Admin_Settings {
     // Return the array processing any additional functions filtered by this action
     return apply_filters( 'validate_general_options', $output, $input );
   } // end validate_general_options
+
+  public function delete_events_from_api () {
+    Lct_Events_Cron::delete_events_added_from_api();
+  }
+
+  public function sync_venues_and_events () {
+    $cron = new Lct_Events_Cron();
+    $cron->lct_events_cron_run();
+  }
 }
