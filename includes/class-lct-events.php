@@ -197,6 +197,11 @@ class Lct_Events {
 		$plugin_cron = new Lct_Events_Cron();
 		$this->loader->add_action( 'init', $plugin_cron, 'lct_events_cron_activation' );
 
+		// venue map shortcode
+		$this->loader->add_action( 'init', $plugin_public, 'register_shortcodes' );
+
+		// $this->loader->add_filter( 'tribe_events_ajax_response', $plugin_public, 'lct_events_modify_pin_markers' );
+
 	}
 
 	/**

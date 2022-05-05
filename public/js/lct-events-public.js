@@ -29,4 +29,25 @@
 	 * practising this, we should strive to set a better example in our own work.
 	 */
 
+	$(document).ready(function () {
+		// If we are on the events/map page, let's search by events local to where we are at physically
+		var url = window.location.href
+		if (url.indexOf('/play') > -1) {
+			// We only want to append the coordinates search if the user is not already filtering
+			if (url.includes('?')) {
+				// Silence
+			} else {
+				// If we can get coordinates, we are going to redirect to our query string
+				if (navigator.geolocation) {
+					navigator.geolocation.getCurrentPosition(function (position) {
+						url += '?tribe-bar-location=' + position.coords.latitude + ', ' + position.coords.longitude
+
+						// Redirect to local results
+						window.location = url
+					});
+				}
+			}
+		}
+	});
+
 })( jQuery );
