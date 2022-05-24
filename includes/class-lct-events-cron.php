@@ -98,6 +98,7 @@ class Lct_Events_Cron {
 
 		// Add the meta key for the VENUE_ID. This is how we relate WP Venues to Symfony Venues
 		add_post_meta($wp_venue_id, 'VENUE_ID', $venue->id, true);
+		add_post_meta($wp_venue_id, 'VENUE_GAME_TYPE', $venue->type, true);
 		wp_reset_postdata();
 		return $wp_venue_id;
 	}
