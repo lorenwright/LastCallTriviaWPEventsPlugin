@@ -40,10 +40,8 @@
 				// If we can get coordinates, we are going to redirect to our query string
 				if (navigator.geolocation) {
 					navigator.geolocation.getCurrentPosition(function (position) {
-						url += '?tribe-bar-location=' + position.coords.latitude + ', ' + position.coords.longitude
-
-						// Redirect to local results
-						window.location = url
+						$('#tribe-events-events-bar-location').val(position.coords.latitude + ', ' + position.coords.longitude)
+						$('.tribe-events-c-events-bar__search-form').submit()
 					});
 				}
 			}

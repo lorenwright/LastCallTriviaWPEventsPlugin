@@ -149,6 +149,7 @@ class Lct_Events_Public {
 				.map-key {
 					display: flex;
 					justify-content: space-around;
+					padding: 1rem;
 				}
 
 				.key-group {
@@ -181,7 +182,8 @@ class Lct_Events_Public {
 				}
 
 				.filter-bar {
-					display: flex
+					display: flex;
+					justify-content: center;
 				}
 
 				.filter-bar .control {
@@ -208,6 +210,11 @@ class Lct_Events_Public {
 					line-height: 35px;
 					display: block;
 					box-sizing: border-box;
+					color: #fff;
+				}
+
+				.filter-bar .control .button:hover {
+					color: #ffb81c;
 				}
 
 				.tribe-events-pro-map__event-tooltip .lct-pill {
