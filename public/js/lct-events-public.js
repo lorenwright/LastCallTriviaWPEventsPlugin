@@ -40,12 +40,46 @@
 				// If we can get coordinates, we are going to redirect to our query string
 				if (navigator.geolocation) {
 					navigator.geolocation.getCurrentPosition(function (position) {
-						$('#tribe-events-events-bar-location').val(position.coords.latitude + ', ' + position.coords.longitude)
-						$('.tribe-events-c-events-bar__search-form').submit()
+						onMapLoading('body', '.tribe-events-view-loader', '.tribe-common-a11y-hidden', function(mapIsLoading) {
+							window.mapIsLoading = mapIsLoading
+							console.log('mapIsLoading: ' + window.mapIsLoading)
+
+							// If no results and we should reload map
+							if (!$('.tribe-events-pro-map').length && window.reloadMap) {
+								searchByLocation('')
+								window.reloadMap = false
+							}
+						});
+
+						searchByLocation(position.coords.latitude + ' ' + position.coords.longitude)
+						
+						window.reloadMap = true
 					});
 				}
 			}
 		}
+
+		function searchByLocation (locationString) {
+			$('.tribe-events-c-events-bar__search-form').each(function () {
+				$(this).find('#tribe-events-events-bar-location').val(locationString)
+				$(this).submit()
+			})
+		}
 	});
+
+	function onMapLoading(containerSelector, elementSelector, elementLoadingClass, callback) {
+		var onMutationsObserved = function(mutations) {
+			// If elementSelector has class then we are not loading
+			callback(!$(elementSelector + elementLoadingClass).length > 0)
+		};
+	
+		var target = $(containerSelector)[0];
+		var config = { childList: true, subtree: true };
+		var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+		var observer = new MutationObserver(onMutationsObserved);    
+		observer.observe(target, config);
+	
+	}
+
 
 })( jQuery );

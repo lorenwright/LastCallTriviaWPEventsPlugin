@@ -73,7 +73,7 @@ class Lct_Events_Public {
 		 * class.
 		 */
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/lct-events-public.css', array(), $this->version, 'all' );
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/lct-events-public.css', array(), $this->version  . 't' . time(), 'all' );
 
 	}
 
@@ -96,7 +96,7 @@ class Lct_Events_Public {
 		 * class.
 		 */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/lct-events-public.js', array( 'jquery' ), $this->version, false );
+		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/lct-events-public.js', array( 'jquery' ), $this->version . 't' . time(), false );
 
 		wp_enqueue_style( 'tribe_pro_styles', plugins_url() . '/events-calendar-pro/src/resources/css/views-full.min.css');
 	}
@@ -387,21 +387,5 @@ class Lct_Events_Public {
 
 		return $html;
 	}
-
-	// function lct_events_modify_pin_markers( array $response_data ) {
-	// 	var_dump($response_data);
-	// 	die('DIE DIE DIE');
-	// 	// No markers? No need to modify
-	// 	if ( ! isset( $response_data['markers'] ) ) return $response_data;
-	
-	// 	// Otherwise, loop through each and add your extra info
-	// 	foreach ( $response_data['markers'] as &$marker ) {
-	// 		$event_id = $marker['event_id']; // Use this to obtain more information
-	// 		$marker['custom'] = 'https://lastcalltrivia.com/wp-content/uploads/2022/03/CIN_CatchAFire.png'; // Add your extra information here
-	// 	}
-	
-	// 	// Return it!
-	// 	return $response_data;
-	// }
 
 }

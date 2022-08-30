@@ -104,7 +104,7 @@ class Lct_Events_Cron {
 	}
 
 	/**
-	 * This deletes all events with the meta_key `FROM_API` with a value of `true`
+	 * This deletes all events with the meta_key `FROM_API` with a value of `true` where `DO_NOT_SYNC` does not exist
 	 *
 	 * @since     1.0.0
 	 * @return    void
@@ -113,8 +113,19 @@ class Lct_Events_Cron {
 		$query = new WP_Query( array(
 			'post_type' => 'tribe_events',
 			'posts_per_page' => -1,
-			'meta_key' => 'FROM_API',
-			'meta_value' => true
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key' => 'FROM_API',
+					'value' => true
+				),
+				array(
+					'key' => 'DO_NOT_SYNC',
+					'compare' => 'NOT EXISTS',
+					'value' => '' // Ignored, but necessary
+				)
+			)
+			
 		) );
 
 		foreach ($query->posts as $post) {
